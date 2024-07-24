@@ -1,5 +1,6 @@
 # Local .terraform directories
 creds.txt
+secret.yaml
 
 **/.terraform/*
 
