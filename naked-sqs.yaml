@@ -1,0 +1,10 @@
+apiVersion: sqs.aws.upbound.io/v1beta1
+kind: Queue
+metadata:
+  name: edinburgh-cncf
+spec:
+  forProvider:
+    name: edinburgh-cncf
+    region: eu-west-1
+  providerConfigRef:
+    name: aws-sqs

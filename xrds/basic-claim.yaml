@@ -1,0 +1,7 @@
+apiVersion: edinburgh.cncf/v1alpha1
+kind: Queue
+metadata:
+  name: edinburgh-cncf-xrd
+spec:
+  name: edinburgh-cncf
+  role: arn:aws:iam::345933615847:role/queue-test-role

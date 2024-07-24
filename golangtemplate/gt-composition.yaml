@@ -1,0 +1,67 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: sqs-composition-gt
+  annotations:
+    crossplane.io/xrd: edinburgh.cncf
+spec:
+  compositeTypeRef:
+    apiVersion: edinburgh.cncf/v1alpha1
+    kind: xQueue
+  mode: Pipeline
+  pipeline:
+  - step: template
+    functionRef:
+      name: function-go-templating
+    input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{ $claimName := .observed.composite.resource.spec.name }}
+            {{ $roles := .observed.composite.resource.spec.roles }}
+            {{ $rolesLen := len $roles}}
+
+            apiVersion: sqs.aws.upbound.io/v1beta1
+            kind: Queue
+            metadata:
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: "queue"
+            spec:
+              forProvider:
+                region: eu-west-1
+                name: {{ $claimName }}
+              providerConfigRef:
+                name: aws-sqs
+            ---
+            {{ if ne $.observed.resources nil }}
+            apiVersion: sqs.aws.upbound.io/v1beta1
+            kind: QueuePolicy
+            metadata:
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: "policy"
+            spec:
+              forProvider:
+                queueUrlRef:
+                  name: {{ ( index $.observed.resources "queue").resource.metadata.name }}
+                region: eu-west-1
+                policy: >
+                  {
+                    "Version": "2012-10-17",
+                    "Statement":[{
+                      "Sid": "example",
+                      "Effect": "Allow",
+                      "Principal": {
+                        "AWS": [ 
+                        {{ range $i, $r := $roles }}
+                          {{ $r | quote }}{{- if lt $i (sub $rolesLen 1) }},{{- end }}
+                        {{ end }}
+                      ]},
+                      "Action": "sqs:SendMessage",
+                      "Resource": {{ ( index $.observed.resources "queue").resource.status.atProvider.arn | quote }}
+                    }]
+                  } 
+              providerConfigRef:
+                name: aws-sqs
+            {{ end }}

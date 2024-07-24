@@ -1,0 +1,65 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: queue
+spec:
+  compositeTypeRef:
+    apiVersion: edinburgh.cncf/v1alpha1
+    kind: xQueue
+  resources:
+  - name: queue
+    base:
+      apiVersion: sqs.aws.upbound.io/v1beta1
+      kind: Queue
+      spec:
+        forProvider:
+          region: eu-west-1
+        providerConfigRef:
+          name: aws-sqs
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: "spec.name"
+      toFieldPath: "spec.forProvider.name"
+    - type: ToCompositeFieldPath
+      fromFieldPath: "status.atProvider.arn"
+      toFieldPath: "status.queueArn"
+    - type: ToCompositeFieldPath
+      fromFieldPath: metadata.name
+      toFieldPath: status.queueName
+  - name: policy
+    base:
+      apiVersion: sqs.aws.upbound.io/v1beta1
+      kind: QueuePolicy
+      spec:
+        forProvider:
+          queueUrlRef:
+            name: edinburgh-cncf
+          region: eu-west-1
+        providerConfigRef:
+          name: aws-sqs
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: "status.queueName"
+      toFieldPath: "spec.forProvider.queueUrlRef.name" 
+    - type: CombineFromComposite
+      combine:
+        variables:
+        - fromFieldPath: spec.role
+        - fromFieldPath: status.queueArn
+        strategy: string
+        string:
+          fmt: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+              {
+                  "Sid": "example",
+                  "Effect": "Allow",
+                  "Principal": {
+                      "AWS": "%s"
+                  },
+                  "Action": "sqs:SendMessage",
+                  "Resource": "%s"
+              }]
+            }
+      toFieldPath: "spec.forProvider.policy"

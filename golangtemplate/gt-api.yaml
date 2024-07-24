@@ -1,0 +1,33 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata: 
+  name: xqueues.edinburgh.cncf
+spec:
+  group: edinburgh.cncf
+  names:
+    kind: xQueue
+    plural: xqueues
+  claimNames:
+      kind: Queue
+      plural: queues
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              name:
+                type: string
+              roles:
+                type: array
+                items:
+                  type: string
+            required:
+            - name
+            - roles
+  
